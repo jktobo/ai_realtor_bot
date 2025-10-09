@@ -1,58 +1,68 @@
 # app/main.py
 
+# --- ШАГ 1: Загружаем переменные окружения ПЕРВЫМ ДЕЛОМ ---
+from dotenv import load_dotenv
+load_dotenv()
+
+# --- ШАГ 2: Теперь делаем все остальные импорты ---
 from fastapi import FastAPI, Request
 import telegram
 import os
-from dotenv import load_dotenv
+from telegram.constants import ParseMode
 
-# --- НОВОЕ: Импортируем нашу функцию парсера ---
 from .parser import parse_apartments
+from .ai_processor import get_search_parameters
 
-# Загружаем переменные из .env файла
-load_dotenv()
+# Ключ уже загружен, теперь его можно безопасно читать
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-
 bot = telegram.Bot(token=TELEGRAM_BOT_TOKEN)
 app = FastAPI()
+
+# ... остальной код остается без изменений ...
 
 @app.post("/webhook")
 async def webhook(req: Request):
     body = await req.json()
     update = telegram.Update.de_json(body, bot)
 
-    if update.message:
-        chat_id = update.message.chat.id
-        text = update.message.text
+    if not update.message:
+        return {"status": "ok"}
 
-        # --- НОВОЕ: Логика обработки команд ---
-        if text == '/start':
-            await bot.send_message(chat_id=chat_id, text="Привет! Отправь мне /search, чтобы найти квартиры.")
+    chat_id = update.message.chat.id
+    text = update.message.text
+
+    if text == '/start':
+        await bot.send_message(
+            chat_id=chat_id, 
+            text="Привет! Напиши, какую квартиру ты ищешь. Например: 'ищу 2-комнатную в центре до 500$'"
+        )
+    else: 
+        await bot.send_message(chat_id=chat_id, text="Анализирую ваш запрос с помощью AI...")
         
-        elif text == '/search':
-            await bot.send_message(chat_id=chat_id, text="Ищу объявления по умолчанию (2-комнатные)...")
+        params = get_search_parameters(text)
 
-            # v-- ГЛАВНОЕ ИЗМЕНЕНИЕ: добавляем await
-            apartments = await parse_apartments()
+        if not params:
+            await bot.send_message(chat_id=chat_id, text="Не смог распознать параметры. Попробуйте переформулировать.")
+            return {"status": "ok"}
 
-            if apartments:
-                # Отправляем только первые 5, чтобы не спамить в чат
-                for apt in apartments[:5]:
-                    # Форматируем сообщение с использованием Markdown для красивых ссылок
-                    message = (
-                        f"**{apt['title']}**\n"
-                        f"Цена: {apt['price']}\n\n"
-                        f"[Посмотреть на lalafo]({apt['link']})"
-                    )
-                    await bot.send_message(chat_id=chat_id, text=message, parse_mode=telegram.ParseMode.MARKDOWN)
-            else:
-                await bot.send_message(chat_id=chat_id, text="К сожалению, по вашему запросу ничего не найдено.")
+        rooms = params.get("rooms", "")
+        base_url = f"https://lalafo.kg/kyrgyzstan/kvartiry/arenda-kvartir/{rooms}-bedrooms" if rooms else "https://lalafo.kg/kyrgyzstan/kvartiry/arenda-kvartir"
+        
+        await bot.send_message(chat_id=chat_id, text=f"Понял. Ищу по запросу: {text}\nНачинаю парсинг...")
+        
+        apartments = await parse_apartments(base_url)
 
-        else:
-            await bot.send_message(chat_id=chat_id, text=f"Неизвестная команда. Попробуйте /start или /search.")
+        if not apartments:
+            await bot.send_message(chat_id=chat_id, text="К сожалению, ничего не найдено. Попробуйте другой запрос.")
+            return {"status": "ok"}
+        
+        await bot.send_message(chat_id=chat_id, text=f"Найдено {len(apartments)} объявлений. Вот первые 5:")
+        for apt in apartments[:5]:
+            message = (
+                f"*{apt['title']}*\n"
+                f"Цена: {apt['price']}\n\n"
+                f"[Посмотреть на lalafo]({apt['link']})"
+            )
+            await bot.send_message(chat_id=chat_id, text=message, parse_mode=ParseMode.MARKDOWN_V2)
 
     return {"status": "ok"}
-
-
-@app.get("/")
-def read_root():
-    return {"Hello": "World"}

@@ -1,28 +1,26 @@
 # app/parser.py
-import httpx  # <-- Заменяем requests на httpx
+import httpx
 from bs4 import BeautifulSoup
 
-URL = 'https://lalafo.kg/kyrgyzstan/kvartiry/arenda-kvartir/2-bedrooms'
 HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'
+    'User-Agent': 'Mozilla.5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'
 }
 
-# v-- Добавляем async, чтобы функция стала асинхронной
-async def parse_apartments():
-    print("Начинаю асинхронный парсинг...")
+# Теперь функция принимает URL как аргумент
+async def parse_apartments(target_url: str):
+    print(f"Начинаю асинхронный парсинг по URL: {target_url}")
     try:
-        # v-- Используем асинхронный клиент httpx
         async with httpx.AsyncClient() as client:
-            response = await client.get(URL, headers=HEADERS, timeout=20)
-            response.raise_for_status()
-    except httpx.RequestError as e:
+            response = await client.get(target_url, headers=HEADERS, timeout=20, follow_redirects=True)
+            response.raise_for_status() 
+    except (httpx.RequestError, httpx.HTTPStatusError) as e:
         print(f"Ошибка при запросе к сайту: {e}")
         return []
 
-    # ... остальной код парсинга остается без изменений ...
     soup = BeautifulSoup(response.content, 'html.parser')
     apartments = []
     items = soup.find_all('article', class_='ad-tile-horizontal')
+
     for item in items:
         content_container = item.find('div', class_='ad-tile-horizontal-content-container')
         if not content_container:
