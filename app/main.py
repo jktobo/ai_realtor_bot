@@ -1,19 +1,17 @@
 # app/main.py
 
-# --- ШАГ 1: Загружаем переменные окружения ПЕРВЫМ ДЕЛОМ ---
 from dotenv import load_dotenv
 load_dotenv()
 
-# --- ШАГ 2: Теперь делаем все остальные импорты ---
 from fastapi import FastAPI, Request
 import telegram
 import os
 from telegram.constants import ParseMode
 
-from .parser import parse_apartments
-from .ai_processor import get_search_parameters
+# --- ИЗМЕНЕНИЕ: Убираем точки, делаем импорты абсолютными ---
+from parser import parse_apartments
+from ai_processor import get_search_parameters
 
-# Ключ уже загружен, теперь его можно безопасно читать
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 bot = telegram.Bot(token=TELEGRAM_BOT_TOKEN)
 app = FastAPI()
