@@ -48,7 +48,7 @@ This bot needs two secret keys to function:
     * Open Telegram and search for the bot named `@BotFather`.
     * Send the command `/newbot` to BotFather.
     * Follow the instructions to choose a name (e.g., "My Apartment Finder") and a unique username (e.g., "MyAptFinderBot") for your bot.
-    * BotFather will provide you with a **token**. It looks like `7123456789:AAFabcdefghijklmnopqrstuvwxyz12345`. **Copy this token and save it securely.** 
+    * BotFather will provide you with a **token**. It looks like `71234XXXXX:AAFabcdefghijklmnopqrstuvwxyzXXXXX`. **Copy this token and save it securely.** 
 2.  **OpenAI API Key:**
     * Go to [platform.openai.com](https://platform.openai.com/) and sign up or log in.
     * Navigate to the **"API keys"** section in your account settings (usually under your profile icon). 
